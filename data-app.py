@@ -1,10 +1,16 @@
 import streamlit as st
 import random
+import time
 
-page = st.sidebar.radio("Carnival ni Mang Toto", ["Color Game", "Shell Game", "About"])
+page = st.sidebar.radio("Taya Na!", ["Color Game", "Shell Game", "About"])
 
 if page == "Color Game":
     st.title(" Color Game")
+    player_name = st.text_input("Your name (optional):", key="player_name")
+    difficulty = st.slider("Select difficulty (affects payout)", 1, 10, value=5)
+    show_hints = st.checkbox("Show probability hints", key="color_hints")
+    if show_hints:
+        st.info("Each die has a 1/6 chance to match your selected color.")
 
     colors = ['red', 'green', 'blue', 'yellow', 'white', 'pink']
 
@@ -23,7 +29,7 @@ if page == "Color Game":
 
     if st.session_state.money <= 0:
         st.error("Game Over! You're out of money.")
-        if st.button("Restart Game"):
+        if st.button("Start New Game"):
             st.session_state.money = 1000
             st.session_state.bet_amount = 0
             st.session_state.selected_color = None
@@ -34,32 +40,41 @@ if page == "Color Game":
         selected_color = st.selectbox("Select a color to bet on:", colors, index=colors.index(st.session_state.selected_color) if st.session_state.selected_color else 0)
         st.session_state.selected_color = selected_color
 
-        bet_options = [5, 10, 50, 100, 500, 1000]
-        bet_amount = st.selectbox("Select bet amount:", bet_options, index=bet_options.index(st.session_state.bet_amount) if st.session_state.bet_amount in bet_options else 0)
-        st.session_state.bet_amount = bet_amount
+        st.session_state.bet_amount = st.slider("Select bet amount", 5, min(1000, st.session_state.money), value=st.session_state.bet_amount if st.session_state.bet_amount >= 5 else 5)
+        st.metric(label="Current Funds", value=f"${st.session_state.money}", delta=f"${st.session_state.money - 1000}")
 
         if st.session_state.bet_amount > st.session_state.money:
             st.warning("You don't have enough money for this bet!")
         else:
             if st.button("Roll the Dice"):
-                st.session_state.dice_results = [random.choice(colors) for _ in range(3)]
+                with st.spinner("Rolling the dice..."):
+                    time.sleep(0.5)
+                    st.session_state.dice_results = [random.choice(colors) for _ in range(3)]
+                progress = st.progress(0)
+                for i in range(1, 101, 25):
+                    progress.progress(i)
+                    time.sleep(0.05)
 
                 matches = st.session_state.dice_results.count(st.session_state.selected_color)
+                multiplier = 1 + (difficulty - 5) * 0.1  # higher difficulty = higher payout
 
                 if matches == 0:
                     winnings = -st.session_state.bet_amount
-                    st.session_state.message = f"No matches! You lose ${st.session_state.bet_amount}."
+                    msg = f"No matches! You lose ${st.session_state.bet_amount}."
                 elif matches == 1:
-                    winnings = st.session_state.bet_amount
-                    st.session_state.message = f"One match! You win ${winnings}."
+                    winnings = int(st.session_state.bet_amount * multiplier)
+                    msg = f"One match! You win ${winnings}."
                 elif matches == 2:
-                    winnings = 2 * st.session_state.bet_amount
-                    st.session_state.message = f"Two matches! You win ${winnings}."
+                    winnings = int(2 * st.session_state.bet_amount * multiplier)
+                    msg = f"Two matches! You win ${winnings}."
                 elif matches == 3:
-                    winnings = 3 * st.session_state.bet_amount
-                    st.session_state.message = f"Three matches! You win ${winnings}."
+                    winnings = int(3 * st.session_state.bet_amount * multiplier)
+                    msg = f"Three matches! You win ${winnings}."
 
+                st.session_state.message = f"{player_name + ', ' if player_name else ''}{msg}"
                 st.session_state.money += winnings
+                if matches > 0:
+                    st.balloons()
 
         if st.session_state.dice_results:
             st.subheader("Dice Results:")
@@ -96,7 +111,7 @@ elif page == "Shell Game":
 
     if st.session_state.money <= 0:
         st.error("Game Over! You're out of money.")
-        if st.button("Restart Game"):
+        if st.button("Start New Game"):
             st.session_state.money = 1000
             st.session_state.shell_selected_bowl = None
             st.session_state.shell_rock_position = None
@@ -107,9 +122,7 @@ elif page == "Shell Game":
         selected_bowl = st.selectbox("Select a bowl to find the rock:", bowls, index=bowls.index(st.session_state.shell_selected_bowl) if st.session_state.shell_selected_bowl else 0)
         st.session_state.shell_selected_bowl = selected_bowl
 
-        bet_options = [5, 10, 50, 100, 500, 1000]
-        bet_amount = st.selectbox("Select bet amount:", bet_options, index=bet_options.index(st.session_state.bet_amount) if st.session_state.bet_amount in bet_options else 0)
-        st.session_state.bet_amount = bet_amount
+        st.session_state.bet_amount = st.slider("Select bet amount", 5, min(1000, st.session_state.money), value=st.session_state.bet_amount if st.session_state.bet_amount >= 5 else 5)
 
         if st.session_state.bet_amount > st.session_state.money:
             st.warning("You don't have enough money for this bet!")
